@@ -71,6 +71,16 @@ describe("createServer", () => {
     expect(selectOperations({ only: ["list_evals", "get_eval"] }).map((o) => o.name)).toEqual(["list_evals", "get_eval"]);
   });
 
+  it("replaces HTML error pages with a one-line explanation", async () => {
+    const { client } = harness(404, "<!DOCTYPE html><html><head><title>404: This page could not be found.</title></head><body>…</body></html>", "text/html; charset=utf-8");
+    const mcp = await connect(createServer({ client }));
+    const res = (await mcp.callTool({ name: "list_alerts", arguments: {} })) as { isError?: boolean; content: { text: string }[] };
+    expect(res.isError).toBe(true);
+    expect(res.content[0].text).toContain("HTTP 404");
+    expect(res.content[0].text).toContain("not available at this base URL");
+    expect(res.content[0].text).not.toContain("<html");
+  });
+
   it("truncates oversized bodies and says so", async () => {
     const big = JSON.stringify({ rows: "x".repeat(5000) });
     const { client } = harness(200, big);

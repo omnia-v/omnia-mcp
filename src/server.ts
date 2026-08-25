@@ -129,7 +129,13 @@ export function createServer(opts: ServerOptions): McpServer {
         } catch (e) {
           return { isError: true, content: [{ type: "text" as const, text: `request failed: ${(e as Error).message}` }] };
         }
-        const text = res.json !== undefined ? JSON.stringify(res.json, null, 2) : (res.text ?? "");
+        let text = res.json !== undefined ? JSON.stringify(res.json, null, 2) : (res.text ?? "");
+        if (res.json === undefined && res.contentType.includes("text/html")) {
+          // An HTML body is never an API answer — it is the platform's 404/500 page
+          // (route not deployed, wrong base URL). Say that instead of dumping markup.
+          const title = /<title>([^<]*)<\/title>/i.exec(text)?.[1]?.trim();
+          text = `HTML page instead of an API response${title ? ` ("${title}")` : ""} — the route is not available at this base URL (check OMNIA_BASE_URL or whether this API version is deployed).`;
+        }
         const headline = res.ok ? "" : `HTTP ${res.status} from ${op.method} ${op.path}\n`;
         return {
           isError: !res.ok,
