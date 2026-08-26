@@ -1,6 +1,6 @@
 {
   "name": "@omnia-voice/mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "errorbar MCP server — every platform API (evals, criteria, gates, logs, datasets, aliases, audit, proving) as tools for Claude, Cursor, and any MCP client.",
   "license": "Apache-2.0",
   "repository": { "type": "git", "url": "git+https://github.com/omnia-v/omnia-mcp.git" },

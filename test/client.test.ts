@@ -27,6 +27,7 @@ describe("OmniaClient", () => {
     const h = calls[0].init.headers as Record<string, string>;
     expect(h.authorization).toBe("Bearer sk_x");
     expect(h["content-type"]).toBe("application/json");
+    expect(h.accept).not.toContain("text/plain");
     expect(calls[0].init.body).toBe('{"name":"n"}');
     await c.request({ method: "GET", path: "/v1/evals", body: { ignored: true } });
     expect(calls[1].init.body).toBeUndefined();

@@ -67,7 +67,9 @@ export class OmniaClient {
     const url = this.buildUrl(input.path, input.pathParams, input.query);
     const headers: Record<string, string> = {
       authorization: `Bearer ${this.apiKey}`,
-      accept: "application/json, text/csv, application/x-ndjson, text/plain;q=0.9, */*;q=0.8",
+      // No text/plain: some routes (setup/status) switch to a shell-oriented flat
+      // format when they see it; the model wants the JSON the docs describe.
+      accept: "application/json, text/csv, application/x-ndjson, */*;q=0.8",
       "user-agent": this.userAgent,
     };
     let body: string | undefined;
