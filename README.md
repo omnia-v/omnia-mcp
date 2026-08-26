@@ -39,7 +39,7 @@ claude mcp add errorbar -e OMNIA_API_KEY=sk_… -- npx -y @omnia-voice/mcp
 | `--read-only` (or `OMNIA_MCP_READ_ONLY=1`) | expose only `GET` tools |
 | `--no-spend` (or `OMNIA_MCP_NO_SPEND=1`) | hide tools that start billable work (eval runs, training, dedicated capacity, judge assists) |
 | `--only list_evals,get_eval` | expose just these tools |
-| `--base-url URL` (or `OMNIA_BASE_URL`) | API root, default `https://platform.omnia-voice.com/api` |
+| `--base-url URL` (or `OMNIA_BASE_URL`) | API root, default `https://gateway.errorbar.ai` |
 
 Tools that spend wallet credit say **SPENDS MONEY** in their description and are not `readOnlyHint`; MCP clients that confirm before non-read-only calls will ask for those.
 

@@ -5,7 +5,7 @@
  */
 export interface ClientOptions {
   apiKey: string;
-  /** API root, default https://platform.omnia-voice.com/api */
+  /** API root, default https://gateway.errorbar.ai */
   baseUrl?: string;
   fetch?: typeof fetch;
   userAgent?: string;
@@ -21,7 +21,7 @@ export interface ApiResponse {
   text?: string;
 }
 
-export const DEFAULT_BASE_URL = "https://platform.omnia-voice.com/api";
+export const DEFAULT_BASE_URL = "https://gateway.errorbar.ai";
 
 export class OmniaClient {
   private readonly apiKey: string;
