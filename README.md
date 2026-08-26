@@ -146,6 +146,6 @@ npm ci && npm run typecheck && npm test && npm run build
 
 ## Release
 
-Push a tag `vX.Y.Z` — the publish workflow builds, tests, and publishes to npm with provenance.
+Tag `vX.Y.Z` here, then run the `publish-mcp` workflow in [omnia-tracing](https://github.com/omnia-v/omnia-tracing/actions/workflows/publish-mcp.yml) with that tag — the @omnia-voice npm token lives there.
 
 License: Apache-2.0

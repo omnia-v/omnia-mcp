@@ -1,10 +1,10 @@
 name: publish
-# Release = push a tag v0.1.0. Needs the NPM_TOKEN secret (granular token for
-# the @omnia-voice scope — the same one omnia-tracing uses).
+# Releases are published by the `publish-mcp` workflow in omnia-v/omnia-tracing,
+# where the @omnia-voice npm token lives (one token, one place). This workflow
+# is the same job for when this repo gets its own NPM_TOKEN secret — run it
+# by hand; it is not wired to tags so a tag push never fails on a missing secret.
 on:
-  push:
-    tags:
-      - "v*"
+  workflow_dispatch:
 jobs:
   npm:
     runs-on: ubuntu-latest
