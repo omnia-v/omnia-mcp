@@ -1,11 +1,11 @@
 {
   "name": "@error-bar/mcp",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "errorbar MCP server \u2014 every platform API (evals, criteria, gates, logs, datasets, aliases, audit, proving) as tools for Claude, Cursor, and any MCP client.",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/omnia-v/omnia-mcp.git"
+    "url": "git+https://github.com/omnia-v/errorbar-mcp.git"
   },
   "type": "module",
   "bin": {
@@ -43,5 +43,18 @@
     },
     "./cli": "./dist/cli.js"
   },
-  "homepage": "https://docs.errorbar.ai"
+  "homepage": "https://docs.errorbar.ai",
+  "bugs": {
+    "url": "https://github.com/omnia-v/errorbar-mcp/issues"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "llm-evaluation",
+    "llm-as-a-judge",
+    "evals",
+    "errorbar",
+    "claude",
+    "cursor"
+  ]
 }

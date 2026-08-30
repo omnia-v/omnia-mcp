@@ -182,6 +182,6 @@ npm ci && npm run typecheck && npm test && npm run build
 
 ## Release
 
-Tag `vX.Y.Z` here, then run the `publish-mcp` workflow in [omnia-tracing](https://github.com/omnia-v/omnia-tracing/actions/workflows/publish-mcp.yml) with that tag (`dir: .` publishes `@error-bar/mcp`; run it again with `dir: legacy` to publish the `@omnia-voice/mcp` forwarding shim) — the npm token lives there.
+Tag `vX.Y.Z` here, then run the `publish-mcp` workflow in [omnia-tracing](https://github.com/omnia-v/errorbar-tracing/actions/workflows/publish-mcp.yml) with that tag (`dir: .` publishes `@error-bar/mcp`; run it again with `dir: legacy` to publish the `@omnia-voice/mcp` forwarding shim) — the npm token lives there.
 
 License: Apache-2.0
