@@ -1225,7 +1225,7 @@ export const OPERATIONS: readonly Operation[] = [
       {
         "name": "min_win_rate",
         "type": "number",
-        "description": "0..1. Comparison runs: every candidate arm's win-rate 95% CI LOWER bound must be ≥ this (never the point estimate). Fails closed when the judge returned no verdict on too many pairs (unreportable)."
+        "description": "0..1. Comparison runs: every candidate arm's win-rate 95% CI LOWER bound must be ≥ this (never the point estimate). Each check names its basis: \"corrected\" when the run carries ≥30 human pair labels and a usable calibration (the number to gate on — the PRINTED win rate is compressed toward 50% by judge error), else \"printed\" with a note saying how to attach labels (label_eval_pair). When the corrected point clears the bar but the calibration floor cannot, the note prices the missing labels instead of asking for more samples. Fails closed when the judge returned no verdict on too many pairs (unreportable)."
       },
       {
         "name": "min_pass_rate",
@@ -1241,6 +1241,11 @@ export const OPERATIONS: readonly Operation[] = [
         "name": "noninferiority_margin",
         "type": "number",
         "description": "0..1. THE CERTIFIED SWITCH TEST: on a criterion run whose baseline is \"__stored__\" (the incumbent's logged answers) scored by a calibrated judge, each candidate's pass-rate CI floor must reach the incumbent's rate minus this margin (0.05 = provably within 5 points at worst). Requires the stored-baseline arm AND a calibrated judge (corrected rates) — no observed-rate fallback; fails otherwise with an explanatory note."
+      },
+      {
+        "name": "win_rate_ties",
+        "type": "string",
+        "description": "Tie lever for the win-rate check. \"half\" (default): tie = half a win, parity 50%, comparable to the printed rate. \"decided\": ties dropped on both sides — wins/(wins+losses), the share among pairs someone decided; compresses less and needs fewer labels, answers a narrower question. Anything else is a 400."
       },
       {
         "name": "model",
@@ -1265,7 +1270,64 @@ export const OPERATIONS: readonly Operation[] = [
       }
     ],
     "responseSummary": "A bare JSON array (no list envelope), one item per sample in order: {prompt (messages rendered as \"ROLE: content\" lines, clipped to 2000 chars), baseline_answer (the baseline's fresh answer, or the stored logged reply when baseline is \"__stored__\"; empty string on criterion runs), candidates:[{model (arm key), answer (clipped to 2000 chars), outcome}]}. outcome is \"win\"|\"loss\"|\"tie\"|\"failed\" (judge gave no reading) on comparison runs and \"pass\"|\"fail\"|\"unparsed\" on criterion runs; criterion runs list the baseline among candidates.",
-    "notes": "404 when the run is not in this workspace. Works on any status (partial data while RUNNING; empty array before sampling). Texts are clipped server-side at 2000 chars with a \"…[clipped]\" marker — use GET /v1/evals/{id}/evidence?with_content=true for full transcripts. Read-only, no spend."
+    "notes": "404 when the run is not in this workspace. Works on any status (partial data while RUNNING; empty array before sampling). Texts are clipped server-side at 2000 chars with a \"…[clipped]\" marker — use GET /v1/evals/{id}/evidence?with_content=true for full transcripts. Comparison items also carry human_verdict (\"candidate\"|\"baseline\"|\"tie\"|null) per candidate once pairs are labelled (label_eval_pair). Read-only, no spend."
+  },
+  {
+    "name": "label_eval_pair",
+    "method": "POST",
+    "path": "/v1/evals/{id}/pair_labels",
+    "summary": "Record a HUMAN's verdict on one candidate-vs-baseline pair of a comparison run — the calibration evidence behind the corrected win rate. A pairwise judge's printed win rate is compressed toward 50/50 (a true 80/20 prints ~70/30 even for a judge at the human ceiling); from 30 labels the run reports a corrected rate with an interval that carries the calibration uncertainty.",
+    "scope": "evals:write",
+    "pathParams": [
+      {
+        "name": "id",
+        "type": "string",
+        "description": "The eval run id (a comparison run; criterion runs are refused — they are graded pass/fail per exchange with trace labels)."
+      }
+    ],
+    "body": [
+      {
+        "name": "sample_index",
+        "type": "number",
+        "description": "0-based sample index within the run (the order get_eval_samples returns).",
+        "required": true
+      },
+      {
+        "name": "candidate",
+        "type": "string",
+        "description": "The candidate arm key the verdict is about (as listed in candidate_models / get_eval_samples).",
+        "required": true
+      },
+      {
+        "name": "verdict",
+        "type": "string",
+        "description": "Which answer the human preferred: \"candidate\", \"baseline\", or \"tie\" (a tie is a real answer, not a skip).",
+        "required": true
+      },
+      {
+        "name": "critique",
+        "type": "string",
+        "description": "Optional free-text WHY (≤2000 chars)."
+      }
+    ],
+    "responseSummary": "{sample_index, candidate, verdict, critique, pairwise} — pairwise is the run's refreshed calibration block (same shape as get_eval_pairwise), so one call shows what the label bought. One label per (sample, candidate); posting again overwrites. DELETE /v1/evals/{id}/pair_labels?sample_index=…&candidate=… removes one; GET lists them.",
+    "notes": "Labelling is a human's job: only relay verdicts the user actually gave — never invent preferences to reach 30. 400 with the offender named on a bad sample_index/candidate/verdict; 404 when the run is not in this workspace. No spend."
+  },
+  {
+    "name": "get_eval_pairwise",
+    "method": "GET",
+    "path": "/v1/evals/{id}/pairwise",
+    "summary": "The pairwise judge's spec sheet and calibration for a comparison run — position bias measured on THIS run's pairs (it ranges from +0 to +45 points for the same judge on different traffic), tie behaviour, swap consistency, and the corrected win rate once pairs are labelled.",
+    "scope": "read",
+    "pathParams": [
+      {
+        "name": "id",
+        "type": "string",
+        "description": "The eval run id (comparison runs only)."
+      }
+    ],
+    "responseSummary": "{v, computed_at, labelled_pairs, calibration: null until pairs are labelled, else {n, agreement, kappa, usable, reason (why not, when unusable), wins/losses/decided: per-side Se/Sp with CIs}, candidates: {<arm>: {spec_sheet: {pairs, failed_pairs, swap_consistency (+CI), picks_first/second/tie, first_minus_second (+CI — the position bias in points; humans measure ~0), tie_rate, disagreement_ties (ties that are the two orderings disagreeing = the judge preferring whichever answer it saw first)}, labelled_pairs, corrected: null until usable, else {win_rate (½ + (W−L)/2, tie = half a win, parity 50%), win_rate_ci (Lang–Reiczigel — includes calibration uncertainty), floor_half_width (the width no amount of judged pairs can beat at this label count), calibration_variance_share, decided: the ties-dropped variant}}}}.",
+    "notes": "Recomputed on read from the run's persisted verdicts and labels — never stale. The same block is stored on the run's results as results.pairwise at finalize and on every label write, so gate/evidence read identical numbers. Report the corrected rate WITH its interval and the printed rate alongside; the floor says when to ask for more labels instead of more samples. 404 when the run is not in this workspace; 400 for criterion runs. Read-only, no spend."
   },
   {
     "name": "list_training_files",

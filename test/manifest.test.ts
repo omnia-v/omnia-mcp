@@ -46,6 +46,8 @@ const PLATFORM_ROUTES = [
   "GET /v1/evals/{id}",
   "DELETE /v1/evals/{id}",
   "GET /v1/evals/{id}/samples",
+  "POST /v1/evals/{id}/pair_labels",
+  "GET /v1/evals/{id}/pairwise",
   "GET /v1/evals/compare",
   "GET /v1/evals/failure_clusters",
   "GET /v1/evals",
