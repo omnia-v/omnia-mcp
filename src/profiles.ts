@@ -60,6 +60,7 @@ export const PROFILES: Record<string, Profile> = {
       "list_refusals",
       "list_evals",
       "get_eval",
+      "get_eval_pairwise",
     ],
   },
   release: {
@@ -72,6 +73,8 @@ export const PROFILES: Record<string, Profile> = {
       "get_eval",
       "create_eval",
       "get_eval_gate",
+      "get_eval_pairwise",
+      "label_eval_pair",
       "get_eval_evidence",
       "compare_evals",
       "list_aliases",
