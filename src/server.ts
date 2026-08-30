@@ -134,7 +134,7 @@ export function createServer(opts: ServerOptions): McpServer {
           // An HTML body is never an API answer — it is the platform's 404/500 page
           // (route not deployed, wrong base URL). Say that instead of dumping markup.
           const title = /<title>([^<]*)<\/title>/i.exec(text)?.[1]?.trim();
-          text = `HTML page instead of an API response${title ? ` ("${title}")` : ""} — the route is not available at this base URL (check OMNIA_BASE_URL or whether this API version is deployed).`;
+          text = `HTML page instead of an API response${title ? ` ("${title}")` : ""} — the route is not available at this base URL (check ERRORBAR_BASE_URL or whether this API version is deployed).`;
         }
         const headline = res.ok ? "" : `HTTP ${res.status} from ${op.method} ${op.path}\n`;
         return {

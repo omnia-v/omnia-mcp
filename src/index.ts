@@ -1,4 +1,6 @@
 export { OmniaClient, DEFAULT_BASE_URL } from "./client.js";
+/** The client under the product's name; `OmniaClient` stays exported for existing code. */
+export { OmniaClient as ErrorbarClient } from "./client.js";
 export type { ClientOptions, ApiResponse } from "./client.js";
 export { createServer, selectOperations, inputShapeFor, descriptionFor } from "./server.js";
 export type { ServerOptions } from "./server.js";

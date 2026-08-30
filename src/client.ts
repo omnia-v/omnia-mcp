@@ -34,7 +34,7 @@ export class OmniaClient {
     this.apiKey = opts.apiKey;
     this.baseUrl = (opts.baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, "");
     this.fetchImpl = opts.fetch ?? globalThis.fetch;
-    this.userAgent = opts.userAgent ?? "omnia-mcp";
+    this.userAgent = opts.userAgent ?? "errorbar-mcp";
   }
 
   /** Builds the absolute URL: path with `{param}` filled, plus a query string. */

@@ -1,21 +1,23 @@
-# @omnia-voice/mcp
+# @error-bar/mcp
 
 The errorbar platform as MCP tools — every public API operation (evals, judges/criteria, gates, logs, datasets, aliases, label sets, audit/proving, dedicated endpoints, training) callable from Claude Code, Claude Desktop, Cursor, or any MCP client.
 
 One tool per API operation, 76 tools, generated from the platform's route contracts. Inputs are validated with the same field names and casing the REST API accepts; responses come back exactly as the API returned them (JSON pretty-printed, exports as text), including the API's own error status and message.
 
+> Renamed from `@omnia-voice/mcp` (2026-08-30). The old name is published as a shim that forwards here; update your config when convenient.
+
 ## Install
 
 ```bash
-npx -y @omnia-voice/mcp        # or: npm i -g @omnia-voice/mcp && omnia-mcp
+npx -y @error-bar/mcp        # or: npm i -g @error-bar/mcp && errorbar-mcp
 ```
 
-Needs `OMNIA_API_KEY` (a workspace API key, `sk_…`, from **Settings → API keys**). Give the key only the scopes the agent should have — `read` for a monitoring agent, `read` + `evals:write` for one that runs evals — the platform enforces them and each tool's description says which scope it needs.
+Needs `ERRORBAR_API_KEY` (a workspace API key, `sk_…`, from **Settings → API keys**). Give the key only the scopes the agent should have — `read` for a monitoring agent, `read` + `evals:write` for one that runs evals — the platform enforces them and each tool's description says which scope it needs.
 
 ### Claude Code
 
 ```bash
-claude mcp add errorbar -e OMNIA_API_KEY=sk_… -- npx -y @omnia-voice/mcp
+claude mcp add errorbar -e ERRORBAR_API_KEY=sk_… -- npx -y @error-bar/mcp
 ```
 
 ### Claude Desktop / Cursor / any `mcpServers` config
@@ -25,8 +27,8 @@ claude mcp add errorbar -e OMNIA_API_KEY=sk_… -- npx -y @omnia-voice/mcp
   "mcpServers": {
     "errorbar": {
       "command": "npx",
-      "args": ["-y", "@omnia-voice/mcp"],
-      "env": { "OMNIA_API_KEY": "sk_…" }
+      "args": ["-y", "@error-bar/mcp"],
+      "env": { "ERRORBAR_API_KEY": "sk_…" }
     }
   }
 }
@@ -36,10 +38,12 @@ claude mcp add errorbar -e OMNIA_API_KEY=sk_… -- npx -y @omnia-voice/mcp
 
 | Flag | Effect |
 | --- | --- |
-| `--read-only` (or `OMNIA_MCP_READ_ONLY=1`) | expose only `GET` tools |
-| `--no-spend` (or `OMNIA_MCP_NO_SPEND=1`) | hide tools that start billable work (eval runs, training, dedicated capacity, judge assists) |
+| `--read-only` (or `ERRORBAR_MCP_READ_ONLY=1`) | expose only `GET` tools |
+| `--no-spend` (or `ERRORBAR_MCP_NO_SPEND=1`) | hide tools that start billable work (eval runs, training, dedicated capacity, judge assists) |
 | `--only list_evals,get_eval` | expose just these tools |
-| `--base-url URL` (or `OMNIA_BASE_URL`) | API root, default `https://gateway.errorbar.ai` |
+| `--base-url URL` (or `ERRORBAR_BASE_URL`) | API root, default `https://gateway.errorbar.ai` |
+
+The `OMNIA_*` spellings of every environment variable are still accepted.
 
 Tools that spend wallet credit say **SPENDS MONEY** in their description and are not `readOnlyHint`; MCP clients that confirm before non-read-only calls will ask for those.
 
@@ -129,10 +133,10 @@ Each tool's description carries the full contract: every query and body field, w
 ## Programmatic use
 
 ```ts
-import { createServer, OmniaClient } from "@omnia-voice/mcp";
+import { createServer, ErrorbarClient } from "@error-bar/mcp";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 
-const server = createServer({ client: new OmniaClient({ apiKey: process.env.OMNIA_API_KEY! }), readOnly: true });
+const server = createServer({ client: new ErrorbarClient({ apiKey: process.env.ERRORBAR_API_KEY! }), readOnly: true });
 await server.connect(new StdioServerTransport());
 ```
 
@@ -146,6 +150,6 @@ npm ci && npm run typecheck && npm test && npm run build
 
 ## Release
 
-Tag `vX.Y.Z` here, then run the `publish-mcp` workflow in [omnia-tracing](https://github.com/omnia-v/omnia-tracing/actions/workflows/publish-mcp.yml) with that tag — the @omnia-voice npm token lives there.
+Tag `vX.Y.Z` here, then run the `publish-mcp` workflow in [omnia-tracing](https://github.com/omnia-v/omnia-tracing/actions/workflows/publish-mcp.yml) with that tag (`dir: .` publishes `@error-bar/mcp`; run it again with `dir: legacy` to publish the `@omnia-voice/mcp` forwarding shim) — the npm token lives there.
 
 License: Apache-2.0

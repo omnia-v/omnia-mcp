@@ -1,21 +1,32 @@
 {
-  "name": "@omnia-voice/mcp",
-  "version": "0.2.0",
-  "description": "errorbar MCP server — every platform API (evals, criteria, gates, logs, datasets, aliases, audit, proving) as tools for Claude, Cursor, and any MCP client.",
+  "name": "@error-bar/mcp",
+  "version": "0.3.0",
+  "description": "errorbar MCP server \u2014 every platform API (evals, criteria, gates, logs, datasets, aliases, audit, proving) as tools for Claude, Cursor, and any MCP client.",
   "license": "Apache-2.0",
-  "repository": { "type": "git", "url": "git+https://github.com/omnia-v/omnia-mcp.git" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/omnia-v/omnia-mcp.git"
+  },
   "type": "module",
-  "bin": { "omnia-mcp": "dist/cli.js" },
+  "bin": {
+    "errorbar-mcp": "dist/cli.js",
+    "omnia-mcp": "dist/cli.js"
+  },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "files": ["dist", "README.md"],
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json && chmod +x dist/cli.js",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "start": "node dist/cli.js"
   },
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
     "zod": "^3.25.0"
@@ -24,5 +35,13 @@
     "@types/node": "^22.0.0",
     "typescript": "^5.6.0",
     "vitest": "^3.0.0"
-  }
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./cli": "./dist/cli.js"
+  },
+  "homepage": "https://docs.errorbar.ai"
 }
