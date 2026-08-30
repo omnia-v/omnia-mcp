@@ -28,7 +28,8 @@ describe("createServer", () => {
     const { client } = harness();
     const mcp = await connect(createServer({ client }));
     const { tools } = await mcp.listTools();
-    expect(tools.length).toBe(OPERATIONS.length);
+    // Every API operation, plus the three task-shaped tools (profiles.ts).
+    expect(tools.length).toBe(OPERATIONS.length + 3);
     const get = tools.find((t) => t.name === "get_eval")!;
     expect(get.annotations?.readOnlyHint).toBe(true);
     expect(get.inputSchema.required).toEqual(["id"]);

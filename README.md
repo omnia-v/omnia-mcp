@@ -34,12 +34,44 @@ claude mcp add errorbar -e ERRORBAR_API_KEY=sk_… -- npx -y @error-bar/mcp
 }
 ```
 
+## Profiles — hand the agent the tools for one job
+
+Seventy-six tools is the complete contract and the wrong thing to give a model with one question: every description is read before the first call, and a long list makes the pick worse. A profile is the handful a job needs, plus the task-shaped tools that answer the job's question directly.
+
+```bash
+npx -y @error-bar/mcp --profile monitor      # or ERRORBAR_MCP_PROFILE=monitor
+```
+
+| Profile | For | Tools |
+| --- | --- | --- |
+| `setup` | connect traffic and reach the first verdict | `get_setup_status`, `screen_my_traffic`, `list_logs`, `get_trace`, `list_evals`, `get_eval`, `list_criterion_templates`, `list_criteria`, `create_criterion`, `get_criterion`, `run_criterion_alignment`, `is_my_judge_trustworthy` |
+| `monitor` | is quality holding, can the judges be trusted — read-only by construction | `get_setup_status`, `is_my_judge_trustworthy`, `list_criteria`, `get_criterion`, `get_criterion_alignment`, `get_criterion_certificate`, `list_alerts`, `get_judge_settings`, `get_failure_clusters`, `list_refusals`, `list_evals`, `get_eval` |
+| `release` | ship or hold: comparison, gate on the interval, repoint the alias | `can_i_ship`, `screen_my_traffic`, `list_evals`, `get_eval`, `create_eval`, `get_eval_gate`, `get_eval_evidence`, `compare_evals`, `list_aliases`, `upsert_alias`, `get_criterion_certificate`, `verify_document` |
+| `all` (default) | everything: all 76 operations plus the task tools | — |
+
+`--read-only`, `--no-spend` and `--only` apply on top of a profile.
+
+## Task-shaped tools
+
+Three tools answer the questions people actually ask, with the doctrine applied (verdicts from the interval, never the point estimate) and a pointer to the one-per-endpoint tool for the detail:
+
+| Tool | Question | Does |
+| --- | --- | --- |
+| `screen_my_traffic` | would a cheaper (or newer) model hold on my traffic? | starts a zero-config screening against the incumbent's stored answers, waits for it, returns each candidate's verdict with its win-rate interval, cost vs today and similarity to production, plus switch/keep. **Spends** wallet credit. |
+| `is_my_judge_trustworthy` | can I believe this judge? | one criterion or all: trust verdict from the TPR/TNR intervals, catches-failures / passes-clean with 95% CIs, κ, grades, drift, and the one action that changes its state. Read-only. |
+| `can_i_ship` | does the evidence let this change through? | gates the newest finished run (or `eval_id`) with your thresholds — defaults: certified-switch `noninferiority_margin 0.05` for a criterion run against stored answers, `min_win_rate 0.5` for a comparison — and returns ship/hold with every check's required vs actual (the interval's lower bound). Read-only; the same call is the CI step. |
+
+## Resources and prompts
+
+Resources: `errorbar://agent-setup.md` and `errorbar://llms.txt` (fetched live from www.errorbar.ai, so an installed server never rots) and `errorbar://after-traffic-flows` (the first five steps, each naming the tool that performs it). Prompts: `set-up-errorbar`, `after-traffic-flows`, `release-check` (`eval_id` optional).
+
 ## Flags
 
 | Flag | Effect |
 | --- | --- |
-| `--read-only` (or `ERRORBAR_MCP_READ_ONLY=1`) | expose only `GET` tools |
-| `--no-spend` (or `ERRORBAR_MCP_NO_SPEND=1`) | hide tools that start billable work (eval runs, training, dedicated capacity, judge assists) |
+| `--profile NAME` (or `ERRORBAR_MCP_PROFILE`) | `setup` · `monitor` · `release` · `all` (default) — see Profiles |
+| `--read-only` (or `ERRORBAR_MCP_READ_ONLY=1`) | expose only `GET` tools (and the read-only task tools) |
+| `--no-spend` (or `ERRORBAR_MCP_NO_SPEND=1`) | hide tools that start billable work (eval runs, screening, training, dedicated capacity, judge assists) |
 | `--only list_evals,get_eval` | expose just these tools |
 | `--base-url URL` (or `ERRORBAR_BASE_URL`) | API root, default `https://gateway.errorbar.ai` |
 

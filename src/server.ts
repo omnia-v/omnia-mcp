@@ -3,10 +3,15 @@ import { z, type ZodTypeAny } from "zod";
 import type { Operation, Param } from "./manifest-types.js";
 import { OPERATIONS } from "./manifest.js";
 import { OmniaClient } from "./client.js";
+import { COMPOSITE_TOOLS, resolveProfile, type CompositeTool } from "./profiles.js";
+import { registerComposites } from "./composites.js";
+import { registerExtras } from "./extras.js";
 
 export interface ServerOptions {
   client: OmniaClient;
-  /** Expose only GET operations. */
+  /** A curated view of the tool set (profiles.ts). Default "all". */
+  profile?: string;
+  /** Expose only GET operations (and the read-only task tools). */
   readOnly?: boolean;
   /** Hide operations that spend money (eval runs, training, dedicated capacity). */
   noSpend?: boolean;
@@ -15,6 +20,12 @@ export interface ServerOptions {
   /** Max characters of a response body returned to the model (default 60k). */
   maxChars?: number;
   version?: string;
+  /** Between polls of a queued run in the task tools (tests set 0). */
+  pollIntervalMs?: number;
+  /** Where agent-setup.md and llms.txt are fetched from for the resources. */
+  siteUrl?: string;
+  /** fetch used for the resources (the API client has its own). */
+  fetch?: typeof fetch;
 }
 
 function zodFor(p: Param): ZodTypeAny {
@@ -72,8 +83,12 @@ export function descriptionFor(op: Operation): string {
   return parts.join(" ");
 }
 
-export function selectOperations(opts: Pick<ServerOptions, "readOnly" | "noSpend" | "only">): readonly Operation[] {
+type Filters = Pick<ServerOptions, "profile" | "readOnly" | "noSpend" | "only">;
+
+export function selectOperations(opts: Filters): readonly Operation[] {
+  const allowed = resolveProfile(opts.profile);
   let ops: readonly Operation[] = OPERATIONS;
+  if (allowed) ops = ops.filter((o) => allowed.has(o.name));
   if (opts.readOnly) ops = ops.filter((o) => o.method === "GET");
   if (opts.noSpend) ops = ops.filter((o) => !o.spends);
   if (opts.only?.length) {
@@ -83,6 +98,22 @@ export function selectOperations(opts: Pick<ServerOptions, "readOnly" | "noSpend
   return ops;
 }
 
+/** Which task-shaped tools the same filters leave in place. screen_my_traffic
+ *  both writes and spends; the other two are read-only and free. */
+export function selectComposites(opts: Filters): ReadonlySet<CompositeTool> {
+  const allowed = resolveProfile(opts.profile);
+  const only = opts.only?.length ? new Set(opts.only) : null;
+  const out = new Set<CompositeTool>();
+  for (const name of COMPOSITE_TOOLS) {
+    if (allowed && !allowed.has(name)) continue;
+    if (only && !only.has(name)) continue;
+    const isSpendingWrite = name === "screen_my_traffic";
+    if ((opts.readOnly || opts.noSpend) && isSpendingWrite) continue;
+    out.add(name);
+  }
+  return out;
+}
+
 function truncate(s: string, max: number): string {
   return s.length <= max ? s : s.slice(0, max) + `\n… [truncated ${s.length - max} characters; narrow the query or use a cursor]`;
 }
@@ -90,6 +121,15 @@ function truncate(s: string, max: number): string {
 export function createServer(opts: ServerOptions): McpServer {
   const server = new McpServer({ name: "errorbar", version: opts.version ?? "0.0.0" });
   const maxChars = opts.maxChars ?? 60_000;
+
+  // Task-shaped tools first: a client that shows tools in registration order
+  // puts the question-shaped ones where a model looks first.
+  registerComposites(
+    server,
+    { client: opts.client, pollIntervalMs: opts.pollIntervalMs },
+    selectComposites(opts),
+  );
+
   for (const op of selectOperations(opts)) {
     const pathNames = new Set((op.pathParams ?? []).map((p) => p.name));
     const queryNames = new Set((op.query ?? []).map((p) => p.name));
@@ -144,5 +184,7 @@ export function createServer(opts: ServerOptions): McpServer {
       },
     );
   }
+
+  registerExtras(server, { siteUrl: opts.siteUrl, fetch: opts.fetch });
   return server;
 }
