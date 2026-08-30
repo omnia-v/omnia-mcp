@@ -16,41 +16,47 @@ function option(name: string): string | undefined {
   const eq = process.argv.find((a) => a.startsWith(`--${name}=`));
   return eq ? eq.slice(name.length + 3) : undefined;
 }
+/** ERRORBAR_<name> first; the pre-rename OMNIA_<name> still works. */
+function env(name: string): string | undefined {
+  return process.env[`ERRORBAR_${name}`] ?? process.env[`OMNIA_${name}`];
+}
 
 if (flag("help") || flag("h")) {
   process.stdout.write(`errorbar MCP server v${version}
 
-Usage: omnia-mcp [--read-only] [--no-spend] [--only a,b,c] [--base-url URL]
+Usage: errorbar-mcp [--read-only] [--no-spend] [--only a,b,c] [--base-url URL]
 
 Environment:
-  OMNIA_API_KEY   (required) workspace API key, starts with sk_
-  OMNIA_BASE_URL  API root, default ${DEFAULT_BASE_URL}
+  ERRORBAR_API_KEY   (required) workspace API key, starts with sk_
+  ERRORBAR_BASE_URL  API root, default ${DEFAULT_BASE_URL}
+  (the OMNIA_* spellings of these are still accepted)
 
 Flags:
-  --read-only     expose only GET tools
-  --no-spend      hide tools that start billable work (eval runs, training, dedicated capacity)
+  --read-only     expose only GET tools           (or ERRORBAR_MCP_READ_ONLY=1)
+  --no-spend      hide tools that start billable work — eval runs, training,
+                  dedicated capacity               (or ERRORBAR_MCP_NO_SPEND=1)
   --only NAMES    comma-separated tool names to expose
   --base-url URL  override the API root
 `);
   process.exit(0);
 }
 
-const apiKey = process.env.OMNIA_API_KEY ?? process.env.ERRORBAR_API_KEY;
+const apiKey = env("API_KEY");
 if (!apiKey) {
-  process.stderr.write("omnia-mcp: OMNIA_API_KEY is not set\n");
+  process.stderr.write("errorbar-mcp: ERRORBAR_API_KEY is not set\n");
   process.exit(2);
 }
 
 const client = new OmniaClient({
   apiKey,
-  baseUrl: option("base-url") ?? process.env.OMNIA_BASE_URL,
-  userAgent: `omnia-mcp/${version}`,
+  baseUrl: option("base-url") ?? env("BASE_URL"),
+  userAgent: `errorbar-mcp/${version}`,
 });
 const server = createServer({
   client,
   version,
-  readOnly: flag("read-only") || process.env.OMNIA_MCP_READ_ONLY === "1",
-  noSpend: flag("no-spend") || process.env.OMNIA_MCP_NO_SPEND === "1",
+  readOnly: flag("read-only") || env("MCP_READ_ONLY") === "1",
+  noSpend: flag("no-spend") || env("MCP_NO_SPEND") === "1",
   only: option("only")?.split(",").map((s) => s.trim()).filter(Boolean),
 });
 await server.connect(new StdioServerTransport());
