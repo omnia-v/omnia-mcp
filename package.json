@@ -1,6 +1,6 @@
 {
   "name": "@error-bar/mcp",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "errorbar MCP server \u2014 every platform API (evals, criteria, gates, logs, datasets, aliases, audit, proving) as tools for Claude, Cursor, and any MCP client.",
   "license": "Apache-2.0",
   "repository": {
