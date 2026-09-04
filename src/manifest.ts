@@ -2197,6 +2197,138 @@ export const OPERATIONS: readonly Operation[] = [
     "notes": "Owner/admin only. 400 when the session has no anchor; 404 unknown/foreign."
   },
   {
+    "name": "export_reward_session",
+    "method": "GET",
+    "path": "/v1/reward/sessions/{id}/export",
+    "summary": "Export the graded trajectories a reward session scored, as JSONL — rl (one line per scored item: prompt, completion, reward, verdict, per-judge grades), sft (passing winners, reward ≥ min_grade, fine-tuning prompts format), or pairwise (chosen/rejected from the same prompt within a step, gap ≥ 0.2, for DPO).",
+    "scope": "read",
+    "pathParams": [
+      {
+        "name": "id",
+        "type": "string",
+        "required": true,
+        "description": "Session id."
+      }
+    ],
+    "query": [
+      {
+        "name": "format",
+        "type": "string",
+        "description": "rl (default) | sft | pairwise.",
+        "enum": [
+          "rl",
+          "sft",
+          "pairwise"
+        ]
+      },
+      {
+        "name": "step",
+        "type": "string",
+        "description": "Only items scored under this step tag."
+      },
+      {
+        "name": "min_grade",
+        "type": "number",
+        "description": "sft only: minimum reward for a winner (0..1). Default 0.9."
+      },
+      {
+        "name": "limit",
+        "type": "integer",
+        "description": "Rows to scan, at most 10,000."
+      }
+    ],
+    "responseSummary": "200 application/jsonl; newline-terminated lines. Headers X-Errorbar-Export-Count (lines written), X-Errorbar-Export-Scanned (records read), X-Errorbar-Export-Capped ('true' when the 10,000-row scan cap was hit — narrow with step).",
+    "notes": "Only REGISTERED sessions keep records; a session that never scored returns an empty body. 404 for unknown or foreign sessions.",
+    "raw": true
+  },
+  {
+    "name": "get_reward_environment",
+    "method": "GET",
+    "path": "/v1/reward/sessions/{id}/environment",
+    "summary": "Fetch a reward session's signed environment bundle — reward spec, each judge's calibration certificate, assertions, declared env tools (names only), stored tasks, anchor state, and TRL/verifiers adapter snippets — or just tasks.jsonl with format=tasks.",
+    "scope": "read",
+    "pathParams": [
+      {
+        "name": "id",
+        "type": "string",
+        "required": true,
+        "description": "Session id."
+      }
+    ],
+    "query": [
+      {
+        "name": "format",
+        "type": "string",
+        "description": "bundle (default, JSON) | tasks (JSONL, one task per line).",
+        "enum": [
+          "bundle",
+          "tasks"
+        ]
+      }
+    ],
+    "responseSummary": "JSON bundle { bundle_v, kind: 'errorbar.reward_environment', issued_at, session { id, status, agentic, label, created_at, expires_at, held, pinned_step }, reward, grader { criteria[], certificates[], assertions[] }, anchor, tools[], tasks[], task_count, endpoints, adapters { trl, verifiers }, signature } — verify with verify_document. format=tasks returns application/jsonl.",
+    "notes": "Signed with the same key as eval evidence bundles. Tool endpoint URLs and auth are never included. 404 for unknown or foreign sessions."
+  },
+  {
+    "name": "list_eval_endpoints",
+    "method": "GET",
+    "path": "/v1/endpoints",
+    "summary": "List the customer endpoints registered as eval candidates (endpoint/<name>) — bring-your-own checkpoints served anywhere OpenAI-compatible.",
+    "scope": "read",
+    "responseSummary": "{ object: 'list', data: [ { id, name, ref ('endpoint/<name>'), base_url, model, key_prefix, has_key, created_at } ] }. Keys are never returned."
+  },
+  {
+    "name": "register_eval_endpoint",
+    "method": "POST",
+    "path": "/v1/endpoints",
+    "summary": "Register (or rotate) a customer OpenAI-compatible endpoint so a checkpoint trained anywhere can be an eval candidate named endpoint/<name>, facing the same holdout, judge, gate and certificate as a catalog model; generations are metered at $0.",
+    "scope": "platform:write",
+    "body": [
+      {
+        "name": "name",
+        "type": "string",
+        "required": true,
+        "description": "Letters, digits, _ . - (max 64). Becomes endpoint/<name>."
+      },
+      {
+        "name": "baseUrl",
+        "type": "string",
+        "required": true,
+        "description": "OpenAI-compatible base URL (https)."
+      },
+      {
+        "name": "model",
+        "type": "string",
+        "required": true,
+        "description": "The model name the endpoint expects."
+      },
+      {
+        "name": "apiKey",
+        "type": "string",
+        "description": "Optional bearer key; stored encrypted, never returned."
+      }
+    ],
+    "responseSummary": "201 EvalEndpoint { id, name, ref, base_url, model, key_prefix, has_key, created_at }.",
+    "notes": "Owner/admin only (403). Re-registering a name rotates URL, model and key. Validated by existence, never by the catalog; a customer endpoint is never a judge. 400 'Invalid body: <path> — <message>'."
+  },
+  {
+    "name": "delete_eval_endpoint",
+    "method": "DELETE",
+    "path": "/v1/endpoints/{id}",
+    "summary": "Remove a registered customer endpoint; past eval results keep their lineage, new runs naming it are refused.",
+    "scope": "platform:write",
+    "pathParams": [
+      {
+        "name": "id",
+        "type": "string",
+        "required": true,
+        "description": "Endpoint id (from list_eval_endpoints)."
+      }
+    ],
+    "responseSummary": "{ ok: true }.",
+    "notes": "Owner/admin only (403). 404 for unknown or foreign endpoints."
+  },
+  {
     "name": "list_raft_rounds",
     "method": "GET",
     "path": "/v1/raft/rounds",

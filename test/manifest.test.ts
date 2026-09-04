@@ -89,6 +89,11 @@ const PLATFORM_ROUTES = [
   "POST /v1/reward/score",
   "POST /v1/reward/sessions/{id}/anchor",
   "POST /v1/reward/sessions/{id}/resume",
+  "GET /v1/reward/sessions/{id}/export",
+  "GET /v1/reward/sessions/{id}/environment",
+  "GET /v1/endpoints",
+  "POST /v1/endpoints",
+  "DELETE /v1/endpoints/{id}",
 ];
 
 describe("manifest", () => {
