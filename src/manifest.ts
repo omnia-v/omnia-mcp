@@ -2030,6 +2030,173 @@ export const OPERATIONS: readonly Operation[] = [
     "notes": "MOVES PRODUCTION TRAFFIC: the alias's target is replaced and any live canary split on it is cleared (canary_model null, canary_percent 0). 400 'This version is not deployed yet — deploy its weights before routing traffic to it.' when served_model is null. 404 for a foreign version id or unknown alias. Feature-flag gated (fineTuning flag off → 404) unlike the GET routes. OWNER/ADMIN key required (403). Zod failure returns 400 { error: 'Invalid body: aliasName — ...' } (flat shape). Adoption stamps adopted_at on first adoption only; it is audit-logged."
   },
   {
+    "name": "list_reward_sessions",
+    "method": "GET",
+    "path": "/v1/reward/sessions",
+    "summary": "List this workspace's reward sessions — the certified reward handed to your own trainer — with status, ledger-true spend, expiry, the judges' certificates and the mid-run anchor state.",
+    "scope": "read",
+    "responseSummary": "{ object: \"list\", data: [RewardSession] } where RewardSession = { id, status (ACTIVE|COMPLETED|OVERBUDGET|STOPPED|FAILED), agentic, reward, label, budget_usd, spent_usd, expires_at, created_at, stopped_at, certificates: [JudgeCertificate], anchor: null | { criterion_id, criterion_name, held, held_at, held_reason, pinned_step, checks, history: [AnchorPoint] } }.",
+    "notes": "Newest first, max 100. errorbar never runs the training — the certificate is issued by a party with no stake in the run."
+  },
+  {
+    "name": "create_reward_session",
+    "method": "POST",
+    "path": "/v1/reward/sessions",
+    "summary": "Register a certified reward session for your own trainer: a validated reward (calibrated, non-drift-flagged judges), a reward budget held in the wallet, an expiry, and every judge's signed certificate returned before the first rollout is scored — optionally with an independent anchor judge that holds the run when the reward is being gamed.",
+    "scope": "platform:write",
+    "spends": true,
+    "body": [
+      {
+        "name": "reward",
+        "type": "object",
+        "required": true,
+        "description": "{ mode: \"single\", criterionId } or { mode: \"compositional\", criterionIds: string[] (≥2), assertions?: object[] }. Judges must be calibrated (single ≥0.9 TPR/TNR; compositional ≥0.75 each), not drift-flagged, and on the unit the session grades; refused with the reason otherwise."
+      },
+      {
+        "name": "rewardBudgetUsd",
+        "type": "number",
+        "required": true,
+        "description": "Hard cap on judge spend (max 10000). Held in the wallet at creation; released on stop, expiry or exhaustion (402 budget_exhausted on the next score call)."
+      },
+      {
+        "name": "agentic",
+        "type": "boolean",
+        "description": "Whole-trajectory rewards (steps[]) need trace-unit judges; default false = single-turn, request-unit judges."
+      },
+      {
+        "name": "ttlHours",
+        "type": "number",
+        "description": "Session expiry in hours (default 72, max 720). Scoring past it is refused and the hold released."
+      },
+      {
+        "name": "label",
+        "type": "string",
+        "description": "Free text, ≤120 chars."
+      },
+      {
+        "name": "anchor",
+        "type": "object",
+        "description": "{ criterionId } — an INDEPENDENT calibrated judge: a different criterion whose model or prompt differs from every reward judge (a clone with a new id is refused), aligned ≥0.9, not drift-flagged, same unit. Enables anchor_check."
+      }
+    ],
+    "responseSummary": "201 RewardSession (see list_reward_sessions) including certificates[] and anchor.",
+    "notes": "Requires an OWNER/ADMIN key with platform:write. 402 when the wallet cannot hold the budget; 400 with the exact reason when the reward or anchor fails validation."
+  },
+  {
+    "name": "get_reward_session",
+    "method": "GET",
+    "path": "/v1/reward/sessions/{id}",
+    "summary": "Read one reward session: status, ledger-true spend, expiry, the judges' certificates, and the anchor's hold state and recent checks.",
+    "scope": "read",
+    "pathParams": [
+      {
+        "name": "id",
+        "type": "string",
+        "required": true,
+        "description": "Session id."
+      }
+    ],
+    "responseSummary": "RewardSession (see list_reward_sessions).",
+    "notes": "404 for unknown or foreign sessions."
+  },
+  {
+    "name": "stop_reward_session",
+    "method": "DELETE",
+    "path": "/v1/reward/sessions/{id}",
+    "summary": "Stop a reward session: further scoring is refused and the wallet hold for its budget is released. Idempotent.",
+    "scope": "platform:write",
+    "pathParams": [
+      {
+        "name": "id",
+        "type": "string",
+        "required": true,
+        "description": "Session id."
+      }
+    ],
+    "responseSummary": "RewardSession with status STOPPED.",
+    "notes": "Owner/admin only."
+  },
+  {
+    "name": "score_reward",
+    "method": "POST",
+    "path": "/v1/reward/score",
+    "summary": "Score a rollout group (≤64) against a reward session — the certified reward as your trainer's reward function: composite grade = mean of judge P(pass) and 0/1 assertions, strict pass/fail verdict, masked (null) when a judge cannot parse.",
+    "scope": "platform:write",
+    "spends": true,
+    "body": [
+      {
+        "name": "sessionId",
+        "type": "string",
+        "required": true,
+        "description": "The reward session."
+      },
+      {
+        "name": "step",
+        "type": "string",
+        "description": "Optimizer step tag, ≤40 chars of [A-Za-z0-9_.-]. Namespaces billing ids so a re-sent step is idempotent."
+      },
+      {
+        "name": "items",
+        "type": "array",
+        "items": "object",
+        "required": true,
+        "description": "1..64 rollouts: { requestId: string, conversation: string, response?: string } for single-turn, or { requestId, conversation, steps: [{ role: \"assistant\"|\"tool\", content, source?, toolName? }], sessionId? } for agentic sessions. The server renders trajectories through the same instrument trace calibration uses."
+      }
+    ],
+    "responseSummary": "{ session_id, scores: [{ request_id, grade: number|null, verdict: pass|fail|unparsed, sim_fraction?, raw_grade?, exec_unverified?, attested?, attestation_mismatch? }], spend_micros, criteria: [criterionId] }.",
+    "notes": "grade null = MASK the sample out of the loss; never treat it as 0. Refusals: 402 budget_exhausted (the session's kill switch), 409 held (the anchor held the run — resume deliberately or ship pinned_step), 404 unknown/foreign session, 422 the reward no longer validates. Billing ids are reward:<session>:<step> so a re-sent step settles idempotently."
+  },
+  {
+    "name": "anchor_check",
+    "method": "POST",
+    "path": "/v1/reward/sessions/{id}/anchor",
+    "summary": "Mid-run anchor: submit the current policy's outputs on your FROZEN prompt set; the server scores them with the session's reward and with the independent anchor judge (corrected for its measured error) and decides whether to HOLD the run — reward up ≥10 points over the last three checks while the anchor moves ≤2, or the anchor ≥10 points below its best.",
+    "scope": "platform:write",
+    "spends": true,
+    "pathParams": [
+      {
+        "name": "id",
+        "type": "string",
+        "required": true,
+        "description": "Session id (created with anchor.criterionId)."
+      }
+    ],
+    "body": [
+      {
+        "name": "step",
+        "type": "string",
+        "description": "Optimizer step tag, ≤40 chars of [A-Za-z0-9_.-]. Namespaces billing ids so a re-sent step is idempotent.",
+        "required": true
+      },
+      {
+        "name": "items",
+        "type": "array",
+        "items": "object",
+        "required": true,
+        "description": "1..64 rollouts: { requestId: string, conversation: string, response?: string } for single-turn, or { requestId, conversation, steps: [{ role: \"assistant\"|\"tool\", content, source?, toolName? }], sessionId? } for agentic sessions. The server renders trajectories through the same instrument trace calibration uses."
+      }
+    ],
+    "responseSummary": "{ session_id, held: boolean, reason: string|null, pinned_step: string|null (the best anchor point — the checkpoint to ship), point: { step, at, n, reward_rate, anchor_rate, anchor_ci: [lo, hi], anchor_corrected, masked }, underpowered: string|null, history: [AnchorPoint] (last 20), spend_micros }.",
+    "notes": "Hold, never kill: a held session refuses score_reward with 409 until resume_reward_session. Points with fewer than 20 gradable prompts hold nothing (underpowered says so). 409 held when already held; 422 when the session has no anchor."
+  },
+  {
+    "name": "resume_reward_session",
+    "method": "POST",
+    "path": "/v1/reward/sessions/{id}/resume",
+    "summary": "A human clears an anchor hold on a reward session; the history is kept and the next anchor check decides again from the same window. Never automatic.",
+    "scope": "platform:write",
+    "pathParams": [
+      {
+        "name": "id",
+        "type": "string",
+        "required": true,
+        "description": "Session id."
+      }
+    ],
+    "responseSummary": "RewardSession with anchor.held = false.",
+    "notes": "Owner/admin only. 400 when the session has no anchor; 404 unknown/foreign."
+  },
+  {
     "name": "list_raft_rounds",
     "method": "GET",
     "path": "/v1/raft/rounds",
