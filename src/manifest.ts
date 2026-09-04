@@ -1632,6 +1632,11 @@ export const OPERATIONS: readonly Operation[] = [
         "description": "Holdout size override (rounded, clamped 1..2000). Use 50+ for a real bake-off claim. Default max(3, ceil(promptCount*0.2))."
       },
       {
+        "name": "anchor",
+        "type": "object",
+        "description": "Mid-run anchor: { criterionId: string (an INDEPENDENT calibrated judge — different model or prompt from every reward judge, aligned to 90%, not drift-flagged, same unit), promptCount?: integer (20–500, default 50; carved from the holdout, so holdoutCount must be ≥ this), everySteps?: integer (default 20) }. Every everySteps the trainer re-checks a frozen prompt set with the reward AND the anchor judge; divergence or an anchor drop HOLDS the run (never kills) and pins the best anchor checkpoint, which ships. Held runs' reward calls answer 409 held until a person resumes."
+      },
+      {
         "name": "maxCompletionTokens",
         "type": "integer",
         "description": "Per-rollout generated-token budget, clamped 256..32768. Defaults: 8192 agentic, 1024 single-turn."
