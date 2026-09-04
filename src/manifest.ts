@@ -1974,6 +1974,28 @@ export const OPERATIONS: readonly Operation[] = [
     "raw": true
   },
   {
+    "name": "import_logs",
+    "method": "POST",
+    "path": "/v1/logs/import",
+    "summary": "Import graded traffic: turn external (conversation, reply, optional human verdict) rows into logged exchanges the judge and alignment paths can grade — a labelled export from another tool, a physician-rated benchmark, a spreadsheet of tickets — without replaying prompts through a model. Verdicts become human labels in the same call.",
+    "scope": "evals:write",
+    "body": [
+      {
+        "name": "rows",
+        "type": "array",
+        "required": true,
+        "description": "Up to 200 rows: { request_id?: string (letters, digits, _ . : -, max 100 — becomes pg_im_<id>), messages: [{role, content}], response: string | {content, tool_calls?}, model?: string (default external/import), tag?: string, tools?: object[], prompt_tokens?, completion_tokens?, finish_reason?, verdict?: \"pass\"|\"fail\", critique?: string, scope?: \"request\"|\"trace\" }."
+      },
+      {
+        "name": "tag",
+        "type": "string",
+        "description": "Default traffic tag for rows without one (max 64). Use it as the criterion's population when calibrating on these rows."
+      }
+    ],
+    "responseSummary": "{ object: 'list', data: [ { request_id, logged, reason?, labelled?, label_error? } ], imported, failed, labelled }.",
+    "notes": "409 logging_disabled when request logging is off for the workspace. Rows carrying a verdict require OWNER/ADMIN (403). Never retried — a re-sent request_id is a duplicate you own. Rate limited to 30 calls/min."
+  },
+  {
     "name": "list_model_versions",
     "method": "GET",
     "path": "/v1/model_versions",
