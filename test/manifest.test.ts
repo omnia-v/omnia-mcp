@@ -72,6 +72,7 @@ const PLATFORM_ROUTES = [
   "GET /v1/labels",
   "POST /v1/labels",
   "GET /v1/logs/export",
+  "POST /v1/logs/import",
   "GET /v1/logs",
   "POST /v1/model_versions/{id}/adopt",
   "GET /v1/model_versions/{id}",
